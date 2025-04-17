@@ -1,0 +1,69 @@
+{% load static %}
+{% load price_extras %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="{% static 'css/test.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="{% static 'js/test.js' %}"></script>
+  </head>
+  <body>
+    <h1>Эксперименты с данными в шаблонизаторе Django</h1>
+    {% for employee in employees %}
+    {% if forloop.first %}
+    <hr>
+    {% endif %}
+    <div class="employee">
+        <p>Номер сотрудника: {{forloop.counter}}</p>
+        {% comment %} Протестируем наш тег format_name {% endcomment %}
+        <p>Имя: {{employee.name}}</p>
+        <p>Форматированное имя: {% format_name employee.name %}</p>
+        <p>Статус: {{employee.is_active}}</p>
+        <p>Зарплата {{employee.salary | format_price}}</p>
+        <p>Зарплата в долларах {{employee.salary | format_price:"$"}}</p>
+
+        {% comment %} тег на position format_position принимает позицию и 2 аргумента {% endcomment %}
+
+        <p>Должность через тег: {% format_position employee.position "параметр1" "параметр2" %}</p>
+        
+        {% comment %} Вветвление с проверкой на равенство строк {% endcomment %}
+
+
+        {% if employee.position == "manager" %}
+        <p class="yellow-position">Менеджер барбершопа</p>
+        {% elif employee.position == "master" %}
+        <p class="blue-position">Мастер барбершопа</p>
+        {% else %}
+        <p>Неизвестная должность</p>
+        {% endif %}
+        
+        {% comment %} Вветвление с проверкой на больше меньше {% endcomment %} 
+        {% if employee.salary > 90000 %}
+        <p>Зарплата зарплата руководящей должности: {{employee.position}}</p>
+        {% elif employee.salary < 90000 and employee.salary > 10000 %}
+        <p>Зарплата зарплата мастера: {{employee.position}}</p>
+        {% endif %}
+      </div>
+      
+    {% if forloop.last %}
+    <hr>
+    {% endif %}
+{% endfor %}
+{% comment %} Тест инклюзивного тега employee_card {% endcomment %}
+<!-- Стандартная карточка -->
+{% employee_card employee %}
+
+<!-- VIP карточка с дополнительной информацией -->
+{% employee_card employee2 "vip" %}
+    <p>Этот мастер получил награду "Золотые ножницы 2025"!</p>
+    <p>Записаться к нему можно только за неделю вперёд.</p>
+
+
+<!-- Компактная карточка -->
+{% employee_card employees.2 "compact" %}
+  </body>
+</html>

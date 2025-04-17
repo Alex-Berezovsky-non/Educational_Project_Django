@@ -1,0 +1,24 @@
+[project]
+name = "barbershop"
+version = "0.1.0"
+description = "Учебный проект"
+authors = [
+    {name = "Alex Berezovsky",email = "oxonkoalexey@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django (>=5.1.7,<6.0.0)",
+    "mistralai (>=1.5.2,<2.0.0)",
+    "markdown (>=3.7,<4.0)",
+    "openai (>=1.68.0,<2.0.0)",
+    "python-dotenv (>=1.0.1,<2.0.0)",
+    "django-extensions (>=4.0,<5.0)",
+    "pillow (>=11.1.0,<12.0.0)",
+    "django-debug-toolbar (>=5.1.0,<6.0.0)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
