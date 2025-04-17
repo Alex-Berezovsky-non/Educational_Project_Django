@@ -4,14 +4,15 @@ from .data import *
 from django.contrib.auth.decorators import login_required
 from .models import Order
 from django.shortcuts import get_object_or_404
-from django.db.models import Q 
+from django.db.models import Q
+
 
 def landing(request):
     context = {
         "title": "Главная - Барбершоп Арбуз",
-        "services": services, # Из data.py
-        "masters": masters,   # Из data.py
-        "years_on_market": 50
+        "services": services,  # Из data.py
+        "masters": masters,  # Из data.py
+        "years_on_market": 50,
     }
     return render(request, "core/landing.html", context)
 
@@ -36,37 +37,47 @@ def thanks(request):
 
 @login_required
 def orders_list(request):
-    all_orders = Order.objects.all()
-    search_query = request.GET.get("search", None)
-    
-    if search_query:
+
+    if request.method == "GET":
+        # Получаем все заказы
+        # Используем жадную загрузку для мастеров и услуг
+        # all_orders = Order.objects.prefetch_related("master", "services").all()
+        # all_orders = Order.objects.all()
+        all_orders = Order.objects.select_related("master").prefetch_related("services").all()
         
-        search_in = request.GET.getlist("search_in")  
-        
-        filters = Q()
-        
-       
-        if "phone" in search_in:
-            filters |= Q(phone__icontains=search_query) 
-        
-        if "name" in search_in:
-            filters |= Q(client_name__icontains=search_query) 
-        
-        if "comment" in search_in:
-            filters |= Q(comment__icontains=search_query)
-        
-        if filters:
-            all_orders = all_orders.filter(filters)
-    
-    context = {
-        "title": "Заказы",
-        "orders": all_orders,
-    }
-    
-    return render(request, "core/orders_list.html", context)
+        # Получаем строку поиска
+        search_query = request.GET.get("search", None)
+
+        if search_query:
+            # Получаем чекбоксы
+            check_boxes = request.GET.getlist("search_in")
+
+            # Проверяем Чекбоксы и добавляем Q объекты в запрос
+            # |= это оператор "или" для Q объектов
+            filters = Q()
+
+            if "phone" in check_boxes:
+                # Полная запись где мы увеличиваем фильтры
+                filters = filters | Q(phone__icontains=search_query)
+
+            if "name" in check_boxes:
+                # Сокращенная запись через inplace оператор
+                filters |= Q(client_name__icontains=search_query)
             
+            if "comment" in check_boxes:
+                filters |= Q(comment__icontains=search_query)
 
+            if filters:
+                # Если фильтры появились. Если Q остался пустым, мы не попадем сюда
+                all_orders = all_orders.filter(filters)
 
+        # Отправляем все заказы в контекст
+        context = {
+            "title": "Заказы",
+            "orders": all_orders,
+        }
+
+        return render(request, "core/orders_list.html", context)
 
 
 @login_required
