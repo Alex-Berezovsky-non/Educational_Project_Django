@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from .data import *
 from django.contrib.auth.decorators import login_required
-from .models import Order,Master
+from .models import Order,Master,Service
 from django.shortcuts import get_object_or_404
 from django.db.models import Q,F
 
@@ -20,11 +20,18 @@ def landing(request):
 def master_detail(request, master_id):
     # Получаем мастера по id
     master = get_object_or_404(Master,id=master_id)
+    # Проверяем, просматривал ли пользователь этого мастера ранее
+    viewed_masters = request.session.get("viewed_masters",[])
+    # Если этот мастер еще не был просмотрен этим пользователем в текущей сессии 
+    if master_id not in viewed_masters:
     # Увеличиваем счетчик просмотров для мастера
     # F - это специальный объект, который позволяет ссылатсья на поля модели
-    Master.objects.filter(id=master_id).update(view_count=F("view_count") + 1)
-    # Обновляем объект после изменения в БД
-    master.refresh_from_db()
+        Master.objects.filter(id=master_id).update(view_count=F("view_count") + 1)
+    #  Добавляем мастера в список просмотренных
+        viewed_masters.append(master_id)
+        request.session["viewed_masters"] = viewed_masters
+        # Обновляем объект после изменения в БД
+        master.refresh_from_db()
     # Получаем связанные услуги мастера
     services = master.services.all()
     context = {
@@ -35,6 +42,7 @@ def master_detail(request, master_id):
     }
 
     return render(request, "core/master_detail.html",context)
+
 
 
 def thanks(request):
@@ -102,3 +110,31 @@ def order_detail(request, order_id: int):
     context = {"title": f"Заказ №{order_id}", "order": order}
 
     return render(request, "core/order_detail.html", context)
+
+def service_create(request):
+    if request.method == "GET":
+        # Отправляем все услуги в контекст
+        context = {
+            "title": "Создание услуги",
+        }
+        return render(request,"core/service_form.html",context)
+    elif request.method == "POST":
+        # Получаем данные из формы
+        name = request.POST.get("name")
+        price = request.POST.get("price")
+        description = request.POST.get("description")
+
+        if name and price and description:
+
+            # Создаем новую услугу
+            new_service = Service.objects.create(
+                name = name,
+                price = price,
+                description = description,
+            )
+
+            #  Перенаправляем на страницу с услугами
+            return HttpResponse(f"Услуга {new_service.name} успешно создана!")
+    else:
+        # Если данные не видны, возвращаем ошибку
+        return HttpResponse("Ошибка: все поля должны быть заполнены!")
