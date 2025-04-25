@@ -3,8 +3,10 @@ from django.http import HttpResponse
 from .data import *
 from django.contrib.auth.decorators import login_required
 from .models import Order,Master,Service
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404,redirect
 from django.db.models import Q,F
+# messages - Это встроенный модуль Django для отображения сообщений пользователя
+from django.contrib import messages
 
 
 def landing(request):
@@ -117,12 +119,12 @@ def service_create(request):
         context = {
             "title": "Создание услуги",
         }
-        return render(request,"core/service_form.html",context)
+        return render(request,"core/service_form_create.html",context)
     elif request.method == "POST":
         # Получаем данные из формы
         name = request.POST.get("name")
-        price = request.POST.get("price")
         description = request.POST.get("description")
+        price = request.POST.get("price")
 
         if name and price and description:
 
@@ -138,3 +140,42 @@ def service_create(request):
     else:
         # Если данные не видны, возвращаем ошибку
         return HttpResponse("Ошибка: все поля должны быть заполнены!")
+
+def service_update(request,service_id):
+    # Вне зависимости от метода - получаем услугу
+    service = get_object_or_404(Service,id=service_id)
+
+    # Выводим 404, если услуга не найдена
+    if not service:
+        return HttpResponse(f"Услуга с id{service_id} не найдена!",status=404)
+    
+    # Если метод GET - возвращаем форму 
+    elif request.method == "GET":
+        context = {
+            "title":f"Редактирование услуги {service.name}",
+            "service": service,
+        }
+        return render(request,"core/service_form_update.html",context)
+    
+    elif request.method == "POST":
+        # Получаем данные из формы
+        name = request.POST.get("name")
+        description = request.POST.get("description")
+        price = request.POST.get("price")
+
+        # Проверяем, что все поля заполнены
+        if name and price and description:
+            # Обновляем услугу
+            service.name = name
+            service.description = description
+            service.price = price
+            service.save()
+                
+            #  Даем пользователю уведомление об усмпешном обновлении
+            messages.success(request, f"Услуга {service.name} успешно обновлена!") 
+            return redirect("orders_list")
+        else:
+            # Если данные не валидны, возвращаем ошибку
+            messages.error(request, "Ошибка : все поля доолжны юыть заполнены!")
+            #  Возвращаем форму с ошибкой
+            return render(request, "core/service_form_update.html",{"service": service})
