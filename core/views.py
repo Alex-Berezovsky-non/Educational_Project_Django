@@ -157,24 +157,16 @@ def service_create(request):
 
     elif request.method == "POST":
         # Создаем форму и передаем в нее POST данные
-        form = ServiceForm(request.POST)
+        form = ServiceForm(request.POST, request.FILES)
 
         # Если форма валидна:
         if form.is_valid():
-            # Получаем данные из формы
-            name = form.cleaned_data.get("name")
-            description = form.cleaned_data.get("description")
-            price = form.cleaned_data.get("price")
-
-            # Создаем новую услугу
-            new_service = Service.objects.create(
-                name=name,
-                description=description,
-                price=price,
-            )
-
+            # Так как это ModelForm - нам не надо извлекать поля в отдельности
+            # Сохраняем форму в БД
+            form.save()
+            service_name = form.cleaned_data.get("name")
             # Даем пользователю уведомление об успешном создании
-            messages.success(request, f"Услуга {new_service.name} успешно создана!")
+            messages.success(request, f"Услуга {service_name} успешно создана!")
 
             # Перенаправляем на страницу со всеми услугами
             return redirect("orders_list")
@@ -195,13 +187,9 @@ def service_update(request, service_id):
 
     # Если метод GET - возвращаем форму
     if request.method == "GET":
-        form = ServiceForm(
-            initial={
-                "name": service.name,
-                "description": service.description,
-                "price": service.price,
-            }
-        )
+        # У нас форма связана с моделью. Рендер всех полей 
+        # Просто ложим форму в объект услуги
+        form = ServiceForm(instance=service)
 
         context = {
             "title": f"Редактирование услуги {service.name}",
@@ -212,28 +200,20 @@ def service_update(request, service_id):
 
     elif request.method == "POST":
         # Создаем форму и передаем в нее POST данные
-        form = ServiceForm(request.POST)
+        form = ServiceForm(request.POST, request.FILES, instance=service)
 
         # Если форма валидна:
         if form.is_valid():
-            # Получаем данные из формы
-            name = form.cleaned_data.get("name")
-            description = form.cleaned_data.get("description")
-            price = form.cleaned_data.get("price")
+            # Форма связана с моделью, просто сохраним ее
+            form.save()
 
-            # Проверяем, что все поля заполнены
-            if name and description and price:
-                # Обновляем услугу
-                service.name = name
-                service.description = description
-                service.price = price
-                service.save()
+            service_name = form.cleaned_data.get("name")
 
-                # Даем пользователю уведомление об успешном обновлении
-                messages.success(request, f"Услуга {service.name} успешно обновлена!")
+            # Даем пользователю уведомление об успешном обновлении
+            messages.success(request, f"Услуга {service.name} успешно обновлена!")
 
-                # Перенаправляем на страницу со всеми услугами
-                return redirect("orders_list")
+            # Перенаправляем на страницу со всеми услугами
+            return redirect("orders_list")
         else:
             # Если данные не валидны, возвращаем ошибку
             messages.error(request, "Ошибка: все поля должны быть заполнены!")
