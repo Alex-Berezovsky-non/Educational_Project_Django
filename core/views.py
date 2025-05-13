@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Order, Master, Service
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, F
+import json
 
 # messages - это встроенный модуль Django для отображения сообщений пользователю
 from django.contrib import messages
@@ -225,3 +226,31 @@ def service_update(request, service_id):
             }
 
             return render(request, "core/service_form.html", context)
+
+def masters_services_by_id(request, master_id):
+    """
+    Вью для ajax запросов фронтенда, для подгрузки услуг конкретного мастера в форму m2m выбора услуг
+    """
+
+    # Получаем мастера по id
+    master = get_object_or_404(Master, id=master_id)
+
+    # Получаем услуги
+    services = master.services.all()
+
+    # Формируем ответы в виде JSON
+    responce_data = []
+
+    for service in services:
+        # Добавялем в ответ id и название услуги
+        responce_data.append(
+            {
+                "id" :service.id,
+                "name" :service.name,
+            }
+        )
+        # Возвращаем ответ в формате JSON
+        return HttpResponse(
+            json.dumps(responce_data, ensure_ascii=False, indent=4),
+            content_type="application/json",
+        )
