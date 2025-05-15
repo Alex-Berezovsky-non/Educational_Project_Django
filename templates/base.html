@@ -25,13 +25,12 @@
     {% endblock styles %} 
     {% block extra_head %} {% comment %} Дополнительные элементы в head {% endcomment %} 
     {% endblock extra_head %}
-  </head>
-  <body>
+  </head>  <body>
     <div class="container">
       <header>
         {% block header %} {% include "nav_menu_include.html" %} {% endblock header %}
       </header>
-      <main>
+      <main class="pt-2">
         {% comment %} Тут будет контекнт! {% endcomment %} 
         {% block content %}
         {% comment %} Данные будут вставлятся сюда! {% endcomment %} 
@@ -96,7 +95,6 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
-    <script src="{% static 'js/test.js' %}"></script>
     {% endblock scripts %}
   </body>
 </html>

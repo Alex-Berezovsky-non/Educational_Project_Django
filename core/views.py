@@ -1,25 +1,30 @@
 from math import e
 import re
 from django.shortcuts import redirect, render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from .data import *
 from django.contrib.auth.decorators import login_required
-from .models import Order, Master, Service
+from .models import Order, Master, Service, Review
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, F
-import json
 
 # messages - это встроенный модуль Django для отображения сообщений пользователю
 from django.contrib import messages
-from .forms import ServiceForm,OrderForm
-
+from .forms import ServiceForm, OrderForm, ReviewForm
+import json
 
 
 def landing(request):
+    # Получаем список активных мастеров из базы данных
+    masters_db = Master.objects.filter(is_active=True)
+
+    # Получаем все услуги из базы данных вместо только популярных
+    all_services = Service.objects.all()
+
     context = {
         "title": "Главная - Барбершоп Арбуз",
-        "services": services,  # Из data.py
-        "masters": masters,  # Из data.py
+        "services": all_services,  # Все услуги из базы данных
+        "masters": masters_db,  # Из базы данных
         "years_on_market": 50,
     }
     return render(request, "core/landing.html", context)
@@ -62,22 +67,25 @@ def master_detail(request, master_id):
         request.session["viewed_masters"] = viewed_masters
 
         # Обновляем объект после изменения в БД
-        master.refresh_from_db()
-
-    # Получаем связанные услуги мастера
+        master.refresh_from_db()  # Получаем связанные услуги мастера
     services = master.services.all()
+
+    # Получаем опубликованные отзывы о мастере, сортируем по дате создания (сначала новые)
+    reviews = master.reviews.filter(is_published=True).order_by("-created_at")
 
     context = {
         "title": f"Мастер {master.first_name} {master.last_name}",
         "master": master,
         "services": services,
+        "reviews": reviews,
     }
 
     return render(request, "core/master_detail.html", context)
 
 
 def thanks(request):
-    masters_count = len(masters)
+    # Получаем количество активных мастеров из базы данных
+    masters_count = Master.objects.filter(is_active=True).count()
 
     context = {
         "masters_count": masters_count,
@@ -88,12 +96,15 @@ def thanks(request):
 
 @login_required
 def orders_list(request):
+    # Проверяем, что пользователь является сотрудником
+    if not request.user.is_staff:
+        # Если пользователь не сотрудник, перенаправляем его на главную
+        messages.error(request, "У вас нет доступа к этому разделу")
+        return redirect("landing")
 
     if request.method == "GET":
         # Получаем все заказы
         # Используем жадную загрузку для мастеров и услуг
-        # all_orders = Order.objects.prefetch_related("master", "services").all()
-        # all_orders = Order.objects.all()
         all_orders = (
             Order.objects.select_related("master").prefetch_related("services").all()
         )
@@ -135,6 +146,11 @@ def orders_list(request):
 
 @login_required
 def order_detail(request, order_id: int):
+    # Проверяем, что пользователь является сотрудником
+    if not request.user.is_staff:
+        # Если пользователь не сотрудник, перенаправляем его на главную
+        messages.error(request, "У вас нет доступа к этой странице")
+        return redirect("landing")
 
     order = get_object_or_404(Order, id=order_id)
 
@@ -158,12 +174,12 @@ def service_create(request):
         return render(request, "core/service_form.html", context)
 
     elif request.method == "POST":
-        # Создаем форму и передаем в нее POST данные
+        # Создаем форму и передаем в нее POST данные и FILES для загрузки файлов
         form = ServiceForm(request.POST, request.FILES)
 
         # Если форма валидна:
         if form.is_valid():
-            # Так как это ModelForm - нам не надо извлекать поля в отдельности
+            # Так как это ModelForm - нам не надо извлекать поля по отдельности
             # Сохраняем форму в БД
             form.save()
             service_name = form.cleaned_data.get("name")
@@ -189,8 +205,8 @@ def service_update(request, service_id):
 
     # Если метод GET - возвращаем форму
     if request.method == "GET":
-        # У нас форма связана с моделью. Рендер всех полей 
-        # Просто ложим форму в объект услуги
+        # У нас форма связана с моделью. Рендер всех полей
+        # Просто ложим в форму объект услуги
         form = ServiceForm(instance=service)
 
         context = {
@@ -201,7 +217,7 @@ def service_update(request, service_id):
         return render(request, "core/service_form.html", context)
 
     elif request.method == "POST":
-        # Создаем форму и передаем в нее POST данные
+        # Создаем форму и передаем в нее POST данные, FILES для загрузки файлов и экземпляр для обновления
         form = ServiceForm(request.POST, request.FILES, instance=service)
 
         # Если форма валидна:
@@ -210,15 +226,14 @@ def service_update(request, service_id):
             form.save()
 
             service_name = form.cleaned_data.get("name")
-
             # Даем пользователю уведомление об успешном обновлении
-            messages.success(request, f"Услуга {service.name} успешно обновлена!")
+            messages.success(request, f"Услуга {service_name} успешно обновлена!")
 
             # Перенаправляем на страницу со всеми услугами
             return redirect("orders_list")
         else:
             # Если данные не валидны, возвращаем ошибку
-            messages.error(request, "Ошибка: вы что-то сделали не так!")
+            messages.error(request, "Ошибка: вы что-то сделали не так.")
 
             context = {
                 "title": f"Редактирование услуги {service.name}",
@@ -228,6 +243,7 @@ def service_update(request, service_id):
 
             return render(request, "core/service_form.html", context)
 
+
 def masters_services_by_id(request, master_id=None):
     """
     Вью для ajax запросов фронтенда, для подгрузки услуг конкретного мастера в форму
@@ -236,16 +252,17 @@ def masters_services_by_id(request, master_id=None):
     # Если master_id не передан в URL, пробуем получить его из POST-запроса
     if master_id is None:
         data = json.loads(request.body)
-        master_id = data.get('master_id')
+        master_id = data.get("master_id")
+
     # Получаем мастера по id
     master = get_object_or_404(Master, id=master_id)
- 
+
     # Получаем услуги
     services = master.services.all()
- 
+
     # Формируем ответ в виде JSON
     response_data = []
- 
+
     for service in services:
         # Добавляем в ответ id и название услуги
         response_data.append(
@@ -270,11 +287,11 @@ def order_create(request):
         form = OrderForm()
 
         context = {
-            "title" : "Создание заказа",
-            "form":form,
+            "title": "Создание заказа",
+            "form": form,
             "button_text": "Создать",
         }
-        return render(request,"core/order_form.html",context)
+        return render(request, "core/order_form.html", context)
 
     if request.method == "POST":
         # Создаем форму и передаем в нее POST данные
@@ -288,9 +305,9 @@ def order_create(request):
             # Даем пользователю уведомление об успешном создании
             messages.success(request, f"Заказ для {client_name} успешно создан!")
 
-            # Перенаправляем на страницу со всему заказами
+            # Перенаправляем на страницу со всеми заказами
             return redirect("thanks")
-        
+
         # В случае ошибок валидации Django автоматически заполнит form.errors
         # и отобразит их в шаблоне, поэтому просто возвращаем форму
         context = {
@@ -298,4 +315,82 @@ def order_create(request):
             "form": form,
             "button_text": "Создать",
         }
-        return render(request, "core/order_form.html",context)
+        return render(request, "core/order_form.html", context)
+
+
+def create_review(request):
+    """
+    Представление для создания отзыва о мастере
+    """
+    if request.method == "GET":
+        # При GET-запросе показываем форму, если указан ID мастера, устанавливаем его в поле мастера
+        master_id = request.GET.get("master_id")
+
+        initial_data = {}
+        if master_id:
+            try:
+                master = Master.objects.get(pk=master_id)
+                initial_data["master"] = master
+            except Master.DoesNotExist:
+                pass
+
+        form = ReviewForm(initial=initial_data)
+
+        context = {
+            "title": "Оставить отзыв",
+            "form": form,
+            "button_text": "Отправить",
+        }
+        return render(request, "core/review_form.html", context)
+
+    elif request.method == "POST":
+        form = ReviewForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            review = form.save(
+                commit=False
+            )  # Не сохраняем сразу, чтобы установить is_published=False
+            review.is_published = False  # Отзыв по умолчанию не опубликован
+            review.save()  # Сохраняем отзыв
+
+            # Сообщаем пользователю, что его отзыв успешно добавлен и будет опубликован после модерации
+            messages.success(
+                request,
+                "Ваш отзыв успешно добавлен! Он будет опубликован после проверки модератором.",
+            )
+
+            # Перенаправляем на страницу благодарности
+            return redirect("thanks")
+
+        # В случае ошибок валидации возвращаем форму с ошибками
+        context = {
+            "title": "Оставить отзыв",
+            "form": form,
+            "button_text": "Отправить",
+        }
+        return render(request, "core/review_form.html", context)
+
+
+def get_master_info(request):
+    """
+    Универсальное представление для получения информации о мастере через AJAX.
+    Возвращает данные мастера в формате JSON.
+    """
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        master_id = request.GET.get("master_id")
+        if master_id:
+            try:
+                master = Master.objects.get(pk=master_id)
+                # Формируем данные для ответа
+                master_data = {
+                    "id": master.id,
+                    "name": f"{master.first_name} {master.last_name}",
+                    "experience": master.experience,
+                    "photo": master.photo.url if master.photo else None,
+                    "services": list(master.services.values("id", "name", "price")),
+                }
+                return JsonResponse({"success": True, "master": master_data})
+            except Master.DoesNotExist:
+                return JsonResponse({"success": False, "error": "Мастер не найден"})
+        return JsonResponse({"success": False, "error": "Не указан ID мастера"})
+    return JsonResponse({"success": False, "error": "Недопустимый запрос"})
