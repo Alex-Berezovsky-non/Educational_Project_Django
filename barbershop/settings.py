@@ -39,7 +39,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -116,11 +116,39 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
-# "en-us" это код языка, который используется в проекте. Он указывает, что язык по умолчанию - английский (США).
-#  "ru" - это код языка, который используется для перевода текстов на русскйи язык 
+
+# "en-us" - это код языка, который используется в проекте. Он указывает, что язык по умолчанию - английский (США).
+# "ru" - это код языка, который используется для перевода текстов на русский язык.
 LANGUAGE_CODE = "ru"
 
-TIME_ZONE = "UTC"
+# Список часовых зон для этого параметра
+# Asia/Almaty - это код часовой зоны для Алматы, Казахстан.
+# Europe/Moscow - это код часовой зоны для Москвы, Россия.
+# Europe/Moscow (Москва)
+# Europe/Kaliningrad (Калининград)
+# Europe/Samara (Самара)
+# Europe/Volgograd (Волгоград)
+# Europe/Astrakhan (Астрахань)
+# Europe/Ulyanovsk (Ульяновск)
+# Asia/Yekaterinburg (Екатеринбург)
+# Asia/Omsk (Омск)
+# Asia/Novosibirsk (Новосибирск)
+# Asia/Barnaul (Барнаул)
+# Asia/Tomsk (Томск)
+# Asia/Novokuznetsk (Новокузнецк)
+# Asia/Krasnoyarsk (Красноярск)
+# Asia/Irkutsk (Иркутск)
+# Asia/Chita (Чита)
+# Asia/Yakutsk (Якутск)
+# Asia/Khandyga (Хандыга)
+# Asia/Vladivostok (Владивосток)
+# Asia/Ust-Nera (Усть-Нера)
+# Asia/Magadan (Магадан)
+# Asia/Sakhalin (Сахалин)
+# Asia/Srednekolymsk (Среднеколымск)
+# Asia/Kamchatka (Камчатка)
+# Asia/Anadyr (Анадырь)
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -176,5 +204,7 @@ MISTRAL_MODERATIONS_GRADES = {
         'law': 0.1, # закон
         'pii': 0.1, # личная информация
 }
+
+
 TELEGRAM_BOT_API_KEY = os.getenv("TELEGRAM_BOT_API_KEY")
 TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID")
