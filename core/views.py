@@ -15,7 +15,8 @@ from django.contrib import messages
 from .forms import ServiceForm, OrderForm, ReviewForm
 import json
 
-
+# Импорт LoginRequiredMixin для использования в CBV
+from django.contrib.auth.mixins import LoginRequiredMixin
 def landing(request):
     # Получаем всех мастеров из базы данных (включая неактивных)
     masters_db = Master.objects.all()
@@ -189,6 +190,13 @@ def order_detail(request, order_id: int):
     context = {"title": f"Заказ №{order_id}", "order": order}
 
     return render(request, "core/order_detail.html", context)
+
+
+class OrderDetailView(LoginRequiredMixin,DetailView):
+    model = Order
+    template_name = "core/orderd_detail.html"
+    context_object_name = "order"
+    pk_url_kwarg = "order_id" # Указываем, что pk будет извлекатсья из order_id в URL
 
 
 def service_create(request):
