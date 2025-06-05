@@ -16,7 +16,9 @@ from .forms import ServiceForm, OrderForm, ReviewForm
 import json
 
 # Импорт LoginRequiredMixin для использования в CBV
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+
+
 def landing(request):
     # Получаем всех мастеров из базы данных (включая неактивных)
     masters_db = Master.objects.all()
@@ -192,11 +194,23 @@ def order_detail(request, order_id: int):
     return render(request, "core/order_detail.html", context)
 
 
-class OrderDetailView(LoginRequiredMixin,DetailView):
+class OrderDetailView(LoginRequiredMixin, DetailView):
     model = Order
-    template_name = "core/orderd_detail.html"
-    context_object_name = "order"
-    pk_url_kwarg = "order_id" # Указываем, что pk будет извлекатсья из order_id в URL
+    template_name = "core/order_detail.html"
+    pk_url_kwarg = "order_id"  # Указываем, что pk будет извлекаться из order_id в URL
+
+    def dispatch(self, request, *args, **kwargs):
+    # Сначала проверяем, аутентифицирован ли пользователь (это делает LoginRequiredMixin,
+    # но если бы его не было, проверка была бы здесь: if not request.user.is_authenticated:)
+    # Затем проверяем, является ли пользователь сотрудником
+        if not request.user.is_staff:
+            messages.error(request, "У вас нет доступа к этой странице.")
+            return redirect("landing") 
+            # Или можно было бы вызвать Http403: from django.http import Http403; raise Http403("Доступ запрещен")
+        
+        # Если все проверки пройдены, вызываем родительский метод dispatch,
+        # который уже вызовет get(), post() и т.д.
+        return super().dispatch(request, *args, **kwargs)
 
 
 def service_create(request):
