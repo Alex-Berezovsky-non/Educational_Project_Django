@@ -18,3 +18,7 @@ urlpatterns = [
     # Новый маршрут для редактирования профиля
     path('profile/edit/', views.UserProfileUpdateView.as_view(), name='profile_edit'),
 ]
+
+# Маршруты для восстановления пароля
+path('password-reset/',views.CustomPasswordResetView.as_view(),name='password_reset')
+path('password-reset/done/',views.CustomPasswordResetDoneView.as_view(),name='password_reset_done')

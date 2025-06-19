@@ -14,6 +14,23 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from .forms import UserPasswordChangeForm
 
+from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmView, PasswordResetDoneView, PasswordResetCompleteView, PasswordChangeView
+
+
+
+class CustomPasswordResetView(PasswordResetView):
+    """Кастомная реализация сброса пароля"""
+    template_name = 'users/password_reset_form.html'
+    email_template_name = 'users/password_reset_email.html'
+    success_url = reverse_lazy('users:passwrod_reset_done')
+
+
+class CustomPasswordResetDoneView(PasswordResetConfirmView):
+    """Кастомная реализация подтверждения сброса пароля"""
+    template_name = 'users/password_reset_confirm.html'
+
+
+
 
 class UserRegisterView(CreateView):
     """Представление для регистрации новых пользователей."""
