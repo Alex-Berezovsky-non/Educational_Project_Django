@@ -57,7 +57,8 @@ INSTALLED_APPS = [
     "django_extensions",
     "debug_toolbar",
     "core",
-    "users", # Добавили наше новое приложение 
+    "users", # Добавили наше новое приложение
+    "blog",# Добавили наше новое приложение (blog)
 ]
 
 MIDDLEWARE = [
